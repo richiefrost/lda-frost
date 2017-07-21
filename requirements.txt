@@ -1,0 +1,10 @@
+Cython==0.25.2
+lda==1.0.5
+logging==0.4.9.6
+numpy==1.13.1
+pbr==3.1.1
+Pyro4==4.61
+scipy==0.19.1
+selectors34==1.2
+serpent==1.23
+six==1.10.0
