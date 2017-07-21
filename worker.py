@@ -111,7 +111,7 @@ class Worker(object):
 	@Pyro4.oneway
 	def exit(self):
 		import os
-		print "Shutting down worker %i" % self.worker_id
+		print "Shutting down worker"
 		os._exit(0)
 
 def main():
@@ -122,7 +122,7 @@ def main():
 			uri = daemon.register(Worker(), name)
 			ns.remove(name)
 			ns.register(name, uri)
-			print "Worker ready at %s" % uri
+			#print "Worker ready at %s" % uri
 			daemon.requestLoop()
 
 

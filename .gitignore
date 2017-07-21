@@ -1,0 +1,6 @@
+venv/
+*.pyc
+*.so
+*.c
+config.cfg
+build/
