@@ -8,12 +8,12 @@ if [ $1 == '--help' ] || [ $1 == '-h' ]
 	echo "The system will kill all workers when restarting, then spawn new workers."
 	echo
 	echo "--help: Display this message"
-	echo "--rebuild-cython: Run default, and rebuild all Cython modules"
+	echo "--rebuild-cython: Rebuild all Cython modules"
 	echo "--install-only: Only install unmet requirements on each node, don't start a nameserver, dispatcher or workers"
 	exit
 fi
 
-if [ $1 != '--install-only' ]
+if [ $1 != '--install-only' ] && [ $1 != '--rebuild-cython' ]
 	then
 	echo "Restarting nameserver and dispatcher"
 	# Reset the nameserver, dispatcher and workers first
@@ -50,7 +50,8 @@ do
 	if [ ! -d build ] || [ $1 == '--rebuild-cython' ]
 		then
 		echo "Rebuilding Cython on $i"
-		bash build.sh
+		bash build.sh &
+		continue
 	fi
 
 	if [ $1 != '--install-only' ]
