@@ -1,4 +1,4 @@
-# lda-frost - distributed Latent Dirichlet Allocation with Python and Pyro
+# lda-frost - Distributed Latent Dirichlet Allocation with Python and Pyro
 To run this on my cluster, I'm able to reach each machine by an SSH session to a single node, then cd'ing into each individual node via bash.  To make this more robust, it'll need to be able to handle IP addresses rather than directories.
 
 Note: If this is the first time you're setting up the cluster, it'll take awhile to set up, since each node needs to clone this repo, install all Python requirements, etc.  Currently it's only using Python 2, but that's mostly just because the print statements are for Python 2.
