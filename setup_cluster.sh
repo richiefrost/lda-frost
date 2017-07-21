@@ -4,7 +4,8 @@ if [ $1 == '--help' ] || [ $1 == '-h' ]
 	then
 	echo "Usage: setup_cluster.sh [--help] [--rebuild-cython]"
 	echo "Default tries to install all necessary requirements across nodes, then starts workers on every node."
-	echo "Also, the system restarts the Pyro nameserver and restarts the dispatcher"
+	echo "Also, the system restarts the Pyro nameserver and the dispatcher."
+	echo "The system will kill all workers when restarting, then spawn new workers."
 	echo
 	echo "--help: Display this message"
 	echo "--rebuild-cython: Run default, and rebuild all Cython modules"
