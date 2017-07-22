@@ -4,6 +4,7 @@ import data_converter as dc
 import fplus as fp
 import numpy as np
 from Queue import Queue
+from Queue import Empty
 import threading
 import sys
 import utils
@@ -78,7 +79,7 @@ class Worker(object):
 		while token is None and not self.done:
 			try:
 				token = self.dispatcher.get_token()
-			except Queue.Empty:
+			except Empty:
 				# No tokens currently available. See if we're done, or keep trying
 				if self.check_done():
 					print "Done processing on worker %i" % self.worker_id
