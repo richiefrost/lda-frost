@@ -111,14 +111,7 @@ class Dispatcher:
 
 def main():
 	sys.excepthook = Pyro4.util.excepthook
-	with Pyro4.locateNS() as ns:
-		with Pyro4.Daemon() as daemon:
-			name = LDA_DISPATCHER_PREFIX
-			uri = daemon.register(Dispatcher(), name)
-			ns.remove(name)
-			ns.register(name, uri)
-			print "Dispatcher ready at %s" % uri
-			daemon.requestLoop()
+	utils.pyro_daemon(LDA_DISPATCHER_PREFIX, Dispatcher())
 
 if __name__ == "__main__":
 	main()

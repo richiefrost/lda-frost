@@ -115,15 +115,7 @@ class Worker(object):
 		os._exit(0)
 
 def main():
-	import random
-	with Pyro4.locateNS() as ns:
-		with Pyro4.Daemon() as daemon:
-			name = '%s.%s' % (LDA_WORKER_PREFIX, hex(random.randint(0, 0xffffff))[2:])
-			uri = daemon.register(Worker(), name)
-			ns.remove(name)
-			ns.register(name, uri)
-			#print "Worker ready at %s" % uri
-			daemon.requestLoop()
+	utils.pyro_daemon(LDA_WORKER_PREFIX, Worker(), random_suffix=True)
 
 
 if __name__ == "__main__":
