@@ -22,7 +22,7 @@ if [ $1 != '--install-only' ]
 	pkill -f pyro4-ns
 
 	# Start the nameserver up again, then dispatcher and workers
-	pyro4-ns &
+	pyro4-ns -n 0.0.0.0 &
 	python dispatcher.py &
 fi
 
@@ -52,7 +52,6 @@ do
 		echo "Rebuilding Cython on $i"
 		bash build.sh
 	fi
-
 	if [ $1 != '--install-only' ]
 		then
 		echo "Starting worker on $i"
