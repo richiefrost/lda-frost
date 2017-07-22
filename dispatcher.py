@@ -6,6 +6,7 @@ except ImportError:
     from queue import Queue
 from six import iteritems, itervalues
 import numpy as np
+import argparse
 import sys
 from worker import Worker
 import utils
@@ -110,8 +111,12 @@ class Dispatcher:
 
 
 def main():
+	parser = argparse.ArgumentParser(description=__doc__)
+	parser.add_argument("--host", help="Nameserver hostname (default: %(default)s)", default=None)
+	args = parser.parse_args()
+	ns_conf = {"host": args.host}
 	sys.excepthook = Pyro4.util.excepthook
-	utils.pyro_daemon(LDA_DISPATCHER_PREFIX, Dispatcher())
+	utils.pyro_daemon(LDA_DISPATCHER_PREFIX, Dispatcher(), ns_conf=ns_conf)
 
 if __name__ == "__main__":
 	main()
