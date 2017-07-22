@@ -13,7 +13,7 @@ if [ $1 == '--help' ] || [ $1 == '-h' ]
 	exit
 fi
 
-if [ $1 != '--install-only' ] && [ $1 != '--rebuild-cython' ]
+if [ -z ${1 + x} ] && [ $1 != '--install-only' ] && [ $1 != '--rebuild-cython' ]
 	then
 	echo "Restarting nameserver and dispatcher"
 	# Reset the nameserver, dispatcher and workers first
@@ -47,13 +47,19 @@ do
 		cd lda-frost
 		source venv/bin/activate
 	fi
+	if [ -z ${1 + x} ] && [ $1 == '--install-only' ]
+		then
+		echo "Reinstalling on $i"
+		git pull origin master
+		bash build.sh &
+	fi
 	if [ ! -d build ] || [ $1 == '--rebuild-cython' ]
 		then
 		echo "Rebuilding Cython on $i"
 		bash build.sh &
 		continue
 	fi
-	if [ $1 != '--install-only' ]
+	if [ -z ${1 + x} ] && [ $1 != '--install-only' ]
 		then
 		echo "Starting worker on $i"
 		python worker.py &
