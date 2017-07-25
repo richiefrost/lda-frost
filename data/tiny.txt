@@ -1,0 +1,3 @@
+dog cat bird pet
+dog food pet
+bird wild animal

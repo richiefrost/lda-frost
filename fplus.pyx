@@ -8,7 +8,7 @@ cimport numpy as np
 from cython.operator cimport preincrement as inc, predecrement as dec
 from libc.stdlib cimport malloc, free
 
-def gibbs_sample(WS, DS, ZS, wt, dt, zt, alpha, beta):
+def gibbs_sample(int[:] WS, int[:] DS, int[:] ZS, int[:, :] wt, int[:, :] dt, int[:] zt, double alpha, double beta):
 	N = WS.shape[0]
 	V, K = wt.shape
 	prev_doc = -1
