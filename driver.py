@@ -11,7 +11,7 @@ from dispatcher import Dispatcher
 
 LDA_DISPATCHER_PREFIX = 'lda.dispatcher'
 
-def run(doc_file, vocab={}, K=10, alpha=0.01, beta=0.01, num_iter=1000):
+def run(doc_file, vocab={}, K=10, alpha=0.01, beta=0.01, num_iter=100):
 	if len(vocab) == 0:
 		vocab = dc.vocab_from_file(doc_file)
 	
@@ -38,7 +38,7 @@ def run(doc_file, vocab={}, K=10, alpha=0.01, beta=0.01, num_iter=1000):
 	dispatcher.train()
 
 	# TODO: Periodically get updates from the workers to report log likelihood
-
+	
 		
 
 

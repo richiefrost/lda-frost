@@ -22,7 +22,7 @@ HUGE_TIMEOUT = 365 * 24 * 60 * 60 # one year
 
 class Dispatcher:
 	@Pyro4.expose
-	def initialize(self, V, K, alpha, beta, num_iter, check_every=20):
+	def initialize(self, V, K, alpha, beta, num_iter, check_every=50):
 		# Meant for coordinating updates
 		self.tokens_received = 0
 		self.check_every = check_every
@@ -30,6 +30,8 @@ class Dispatcher:
 		self.K = K
 		self.V = V
 		self.iterations_left = np.repeat(num_iter, V + 1)
+		self.total_iters = num_iter * (V + 1)
+		self.num_iter = num_iter
 		# Get all the workers and servers on the network, but don't initialize them yet
 		self.workers = {}
 		with utils.getNS() as ns:
@@ -77,9 +79,9 @@ class Dispatcher:
 		if self.iterations_left[token[0]] > 0:
 			self.token_queue.put(token)
 		self.tokens_received += 1
-		if self.tokens_received % self.check_every == 0:
+		if self.tokens_received % self.check_every == 0 or (self.total_iters - self.tokens_received) < self.num_iter:
 			total = np.sum(self.iterations_left)
-			#print "Total iterations left: %i" % total
+			print "Total iterations left: %i" % total
 			if total == 0:
 				self.finish()
 		self.workers[worker_id].request_token()
