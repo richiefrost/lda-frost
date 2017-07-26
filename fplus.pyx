@@ -9,9 +9,10 @@ from cython.operator cimport preincrement as inc, predecrement as dec
 from libc.stdlib cimport malloc, free
 
 def gibbs_sample(int[:] WS, int[:] DS, int[:] ZS, int[:, :] wt, int[:, :] dt, int[:] zt, double alpha, double beta):
-	N = WS.shape[0]
-	V, K = wt.shape
-	prev_doc = -1
+	cdef int N = WS.shape[0]
+	cdef int V = wt.shape[0]
+	cdef int K = wt.shape[1]
+	cdef int prev_doc = -1
 	randoms = np.array([np.random.random_sample() for i in range(K)])
 	# Initialize the tree for topics only, expecting to add document topic ratios each time we see a new topic
 	cumulative = np.zeros(K)
