@@ -1,44 +1,47 @@
 import numpy as np
 import Pyro4
-import rsf_gibbs as sampler
-import data_converter as dc
+import utils
 
 LDA_SERVER_PREFIX = 'lda.server'
 
-@Pyro4.expose
 class Server(object):
-	def initialize(self, dispatcher):
-		self.dispatcher = dispatcher
-
-	def initialize_wt(self, V, K):
+	@Pyro4.expose
+	def initialize(self, V, K):
 		self.wt = np.zeros((V, K))
 		self.zt = np.zeros(K)
 		self.V, self.K = V, K
 		
+	@Pyro4.expose
 	def get_wt_row(self, word):
-		return self.word_topic[word].tolist()
+		return self.wt[word].tolist()
 
+	@Pyro4.expose
+	@Pyro4.oneway
 	def update_totals(self, indices, values):
 		np.put(self.zt, indices, values)
 
-	def update_wt_row(self, word, original_word, indices, values):
-		np.put(self.word_topic[word], indices, values)
-		self.dispatcher.send_token_to_worker(original_word)
+	@Pyro4.expose
+	@Pyro4.oneway
+	def update_wt_row(self, word, indices, values):
+		np.put(self.wt[word], indices, values)
 		
+	@Pyro4.expose
 	def get_zt(self):
 		return self.zt.tolist()
 
+	@Pyro4.expose
+	def get_wt(self):
+		return self.wt.tolist()
+
+	@Pyro4.expose
+	@Pyro4.oneway
+	def exit(self):
+		import os
+		print "Shutting down server"
+		os._exit(0)
 
 def main():
-	import random
-	with Pyro4.locateNS() as ns:
-		with Pyro4.Daemon() as daemon:
-			name = '%s.%s' % (LDA_SERVER_PREFIX, hex(random.randint(0, 0xffffff))[2:])
-			uri = daemon.register(Server, name)
-			ns.register(name, uri)
-			print "Server ready at %s" % uri
-			daemon.requestLoop()
-
+	utils.pyro_daemon(LDA_SERVER_PREFIX, Server())
 
 if __name__ == "__main__":
 	main()

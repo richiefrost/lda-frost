@@ -10,9 +10,10 @@ import argparse
 import sys
 from worker import Worker
 import utils
-from time import time
+from time import time, sleep
 
 LDA_WORKER_PREFIX = 'lda.worker'
+LDA_SERVER_PREFIX = 'lda.server'
 LDA_DISPATCHER_PREFIX = 'lda.dispatcher'
 
 # timeout for the Queue object put/get blocking methods.
@@ -21,27 +22,26 @@ LDA_DISPATCHER_PREFIX = 'lda.dispatcher'
 HUGE_TIMEOUT = 365 * 24 * 60 * 60 # one year
 
 class Dispatcher:
+	def __init__(self):
+		Pyro4.config.COMPRESSION = True
+
 	@Pyro4.expose
-	def initialize(self, V, K, alpha, beta, num_iter, check_every=50):
-		# Meant for coordinating updates
-		self.tokens_received = 0
-		self.check_every = check_every
-		self.token_queue = Queue()
+	def initialize(self, V, K, alpha, beta, num_iter):
 		self.K = K
 		self.V = V
-		self.iterations_left = np.repeat(num_iter, V + 1)
-		self.total_iters = num_iter * (V + 1)
-		self.num_iter = num_iter
-		# Get all the workers and servers on the network, but don't initialize them yet
+
+		# Get all the workers and servers on the network
 		self.workers = {}
 		with utils.getNS() as ns:
 			self.callback = Pyro4.Proxy(ns.list(prefix=LDA_DISPATCHER_PREFIX)[LDA_DISPATCHER_PREFIX])
-			print "self.callback", self.callback
+			self.server = Pyro4.Proxy(ns.list(prefix=LDA_SERVER_PREFIX)[LDA_SERVER_PREFIX])
+			self.server.initialize(self.V, self.K)
+			
 			for name, uri in iteritems(ns.list(prefix=LDA_WORKER_PREFIX)):
 				try:
 					worker = Pyro4.Proxy(uri)
 					workerId = len(self.workers)
-					worker.initialize(self.callback, workerId, K, alpha, beta, num_iter)
+					worker.initialize(self.callback, self.server, workerId, K, alpha, beta, num_iter)
 					self.workers[workerId] = worker
 				except Pyro4.errors.PyroError:
 					print "Unresponsive worker at %s, deleting it from name server" % uri
@@ -65,33 +65,26 @@ class Dispatcher:
 		# Update the load balancer to know this worker now has a heaver load
 		self.load[which_worker] += num_words
 
-	@Pyro4.expose
-	def get_token(self):
-		return self.token_queue.get()
-
-	@Pyro4.expose
-	def add_initial_token(self, token):
-		self.token_queue.put(token)
-
-	@Pyro4.expose
-	def receive_token(self, token, worker_id):
-		self.iterations_left[token[0]] -= 1
-		if self.iterations_left[token[0]] > 0:
-			self.token_queue.put(token)
-		self.tokens_received += 1
-		if self.tokens_received % self.check_every == 0 or (self.total_iters - self.tokens_received) < self.num_iter:
-			total = np.sum(self.iterations_left)
-			print "Total iterations left: %i" % total
-			if total == 0:
-				self.finish()
-		self.workers[worker_id].request_token()
+	def join(self):
+		while not all([worker.get_done() for worker in self.workers.values()]):
+			sleep(0.5)
 
 	@Pyro4.expose
 	def train(self):
-		print time()
 		for worker in self.workers.values():
 			worker.start()
-			worker.request_token()
+		print "All workers started, waiting for training to finish"
+		self.join()
+		print "Training finished"
+
+		dt = []
+		for worker in self.workers.values():
+			dt += worker.get_dt()
+		wt = self.server.get_wt()
+		zt = self.server.get_zt()
+
+		return wt, dt, zt
+		
 	
 	@Pyro4.expose
 	def num_workers(self):
@@ -122,4 +115,3 @@ def main():
 
 if __name__ == "__main__":
 	main()
-

@@ -8,42 +8,46 @@ cimport numpy as np
 from cython.operator cimport preincrement as inc, predecrement as dec
 from libc.stdlib cimport malloc, free
 
-def gibbs_sample(int[:] WS, int[:] DS, int[:] ZS, int[:, :] wt, int[:, :] dt, int[:] zt, double alpha, double beta):
-	N = WS.shape[0]
-	V, K = wt.shape
-	prev_doc = -1
-	randoms = np.array([np.random.random_sample() for i in range(K)])
+def gibbs_sample(int[:] WS, int[:] DS, int[:] ZS, int[:, :] wt, int[:, :] dt, int[:] zt, double[:] randoms, double alpha, double beta):
+	cdef int w, i, d, z, z_new, t
+	cdef int N = WS.shape[0]
+	cdef int V = wt.shape[0]
+	cdef int K = wt.shape[1]
+	cdef int prev_doc = -1
 	# Initialize the tree for topics only, expecting to add document topic ratios each time we see a new topic
-	cumulative = np.zeros(K)
+	cdef double* cumulative = <double*> malloc(sizeof(double) * K)
+	if cumulative is NULL:
+		raise MemoryError("Could not allocate memory for cumulative")
+
 	for i in range(N):
 		w = WS[i]
 		d = DS[i]
 		z = ZS[i]
 
-		wt[w, z] -= 1
-		dt[d, z] -= 1
-		zt[z] -= 1
+		dec(wt[w, z])
+		dec(dt[d, z])
+		dec(zt[z])
 
 		cumsum = 0
-		cumulative *= 0
 		for t in range(K):
 			cumsum += ((wt[w, t] + beta) * (dt[d, t] + alpha) / (zt[t] + V * beta))
 			cumulative[t] = cumsum
 
 		uniform = randoms[i % K] * (cumsum)
-		z = np.searchsorted(cumulative, uniform)
+		z_new = searchsorted(cumulative, K, uniform)
 
-		ZS[i] = z
-		wt[w, z] += 1
-		dt[d, z] += 1
-		zt[z] += 1
+		ZS[i] = z_new
+		inc(wt[w, z_new])
+		inc(dt[d, z_new])
+		inc(zt[z_new])
+	free(cumulative)
 
-def sample(int[:] WS, int[:] DS, int[:] ZS, int[:] wt, int[:, :] dt, int[:] zt, double[:] randoms, double alpha, double beta, int word):
+def sample(int[:] WS, int[:] DS, int[:] ZS, int[:, :] wt, int[:, :] dt, int[:] zt, double[:] randoms, double alpha, double beta):
 	cdef int i, t, w, d, z, z_new
 	cdef double rT, qT, cumsum, uniform
 	cdef int N = WS.shape[0]
-	cdef int V = 1 #wt.shape[0]
-	cdef int K = wt.shape[0]
+	cdef int V = wt.shape[0]
+	cdef int K = wt.shape[1]
 	cdef int tree_length = K << 1
 	cdef int probs_length = K
 	cdef int prev_doc = -1
@@ -72,10 +76,7 @@ def sample(int[:] WS, int[:] DS, int[:] ZS, int[:] wt, int[:, :] dt, int[:] zt, 
 		d = DS[i]
 		z = ZS[i]
 
-		if w != word:
-			continue
-
-		dec(wt[z])
+		dec(wt[w, z])
 		dec(dt[d, z])
 		dec(zt[z])
 
@@ -94,7 +95,7 @@ def sample(int[:] WS, int[:] DS, int[:] ZS, int[:] wt, int[:, :] dt, int[:] zt, 
 
 		cumsum = 0
 		for t in range(K):
-			cumsum += (wt[t] * (dt[d, t] + alpha) / (zt[t] + beta_sum))
+			cumsum += (wt[w, t] * (dt[d, t] + alpha) / (zt[t] + beta_sum))
 			rcum[t] = cumsum
 
 		rT = rcum[K-1]
@@ -106,7 +107,7 @@ def sample(int[:] WS, int[:] DS, int[:] ZS, int[:] wt, int[:, :] dt, int[:] zt, 
 			z_new = tree_sample(tree, uniform - rT, K)
 
 		ZS[i] = z_new
-		inc(wt[z_new])
+		inc(wt[w, z_new])
 		inc(dt[d, z_new])
 		inc(zt[z_new])
 

@@ -8,6 +8,7 @@ import sys
 from six import iteritems
 import utils
 from dispatcher import Dispatcher
+from time import time
 
 LDA_DISPATCHER_PREFIX = 'lda.dispatcher'
 
@@ -26,18 +27,13 @@ def run(doc_file, vocab={}, K=10, alpha=0.01, beta=0.01, num_iter=100):
 			dw_row = dc.convert_to_np([doc.strip()], vocab)
 			dispatcher.add_doc(dw_row.tolist())
 
-	for word in range(len(vocab)):
-		token = (word + 1, [0] * K)
-		dispatcher.add_initial_token(token)
-
-	# Totals token is reserverd for token index 0
-	totals_token = (0, [0] * K)
-	dispatcher.add_initial_token(totals_token)
-
 	# Assuming all docs can fit in memory at this point
-	dispatcher.train()
-
-	# TODO: Periodically get updates from the workers to report log likelihood
+	print "Starting to train"
+	t = time()
+	wt, dt, zt = dispatcher.train()
+	elapsed = time() - t
+	print "Finished training"
+	print round(elapsed, 2)
 	
 		
 

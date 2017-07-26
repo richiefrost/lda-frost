@@ -4,6 +4,7 @@ from six import iteritems
 
 LDA_WORKER_PREFIX = 'lda.worker'
 LDA_DISPATCHER_PREFIX = 'lda.dispatcher'
+LDA_SERVER_PREFIX = 'lda.server'
 
 with utils.getNS() as ns:
 	for name, uri in iteritems(ns.list(prefix=LDA_WORKER_PREFIX)):
@@ -19,3 +20,9 @@ with utils.getNS() as ns:
 		dispatcher = Pyro4.Proxy(dispatcher_list[LDA_DISPATCHER_PREFIX])
 		dispatcher.exit()
 		ns.remove(LDA_DISPATCHER_PREFIX)
+
+	server_list = ns.list(prefix=LDA_SERVER_PREFIX)
+	if LDA_SERVER_PREFIX in server_list:
+		server = Pyro4.Proxy(server_list[LDA_SERVER_PREFIX])
+		server.exit()
+		ns.remove(LDA_SERVER_PREFIX)
