@@ -1,5 +1,8 @@
 # lda-frost - Distributed Latent Dirichlet Allocation with Python and Pyro, using token passing
 
+## Note
+This project is currently used to benchmark the LDA inference process.  Further work is to be done to be able to use the approximated posterior.
+
 This project is an experiment to implement text-based LDA with modified token passing as the synchronization technique to keep the word-topic matrix consistent across any number of worker processes.  Worker processes iteratively sample from a subset of the entire corpus when they receive a "token".  Tokens are identified by a 2-tuple, where the first entry in the tuple is the token's ID and the second tuple is a row in the distributed word-topic matrix.  The token ID is the location of a certain word in the vocabulary, and the row is the word-topic row that corresponds to that word.  A dispatcher is used to route token requests amongst workers, and workers can only compute updates to the word-topic matrix for tokens that correspond to words in the word-topic matrix.  Since the model is "owner computes", this model has the potential to be highly parallelizable.
 
 Note: If this is the first time you're setting up the cluster, it'll take awhile to set up, since each node needs to clone this repo, install all Python requirements, etc.  Currently it's only using Python 2, but that's mostly just because the print statements are for Python 2.
