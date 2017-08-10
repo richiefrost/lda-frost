@@ -1,7 +1,4 @@
 import data_converter as dc
-import cProfile
-from multiprocessing import Pool
-import numpy as np
 import Pyro4
 import Pyro4.util
 import sys
@@ -38,6 +35,7 @@ def run(doc_file, vocab={}, K=10, alpha=0.01, beta=0.01, num_iter=100):
 	totals_token = (0, [0] * K)
 	dispatcher.add_initial_token(totals_token)
 
+	# Wait for all workers to finish processing
 	dispatcher.wait()
 
 	# Assuming all docs can fit in memory at this point

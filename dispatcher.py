@@ -27,6 +27,7 @@ class Dispatcher:
 		self.check_every = check_every
 		self.K = K
 		self.V = V
+		self.finished_tokens = {}
 		# Get all the workers and servers on the network, but don't initialize them yet
 		self.workers = {}
 		with utils.getNS() as ns:
@@ -42,7 +43,7 @@ class Dispatcher:
 					ns.remove(name)
 
 		if not self.workers:
-			raise RuntimeError('no workers found; run some lda_worker scripts on your machines first!')
+			raise RuntimeError('no workers found; run some lda.worker scripts on your machines first!')
 
 		for worker in self.workers.values():
 			worker.include_workers(self.workers)
@@ -66,11 +67,35 @@ class Dispatcher:
 	def create_corpus(self):
 		for worker in self.workers.values():
 			worker.create_corpus()
+		self.token_mappings = {word: set() for word in range(self.V)}
+		for worker in self.workers.values():
+			for word in worker.get_uniques():
+				self.token_mappings[word].add(worker.get_worker_id())
+		#for worker in self.workers.values():
+		#	worker.create_mappings()
+
+	@Pyro4.expose
+	@Pyro4.oneway
+	def remove_worker_mapping(self, word, worker_id):
+		self.token_mappings[word].discard(worker_id)
+
+	@Pyro4.expose
+	def get_token_mappings(self, word):
+		return list(self.token_mappings[word])
+
+	@Pyro4.expose
+	def receive_finished_token(self, token):
+		self.finished_tokens[token[0]] = token[1]
 
 	@Pyro4.expose
 	@Pyro4.oneway
 	def add_initial_token(self, token):
-		self.workers[np.random.randint(len(self.workers))].receive_token(token)
+		if token[0] == 0:
+			which_worker = 0
+		else:
+			mappings = list(self.token_mappings[token[0] - 1])
+			which_worker = mappings[0]
+		self.workers[which_worker].receive_token(token)
 
 	def join(self):
 		while not all(worker.check_done() for worker in self.workers.values()):
@@ -79,6 +104,20 @@ class Dispatcher:
 	@Pyro4.expose
 	def wait(self):
 		self.join()
+
+		print "Passed:"
+		for worker in self.workers.values():
+			print "Worker %i:" % worker.get_worker_id(), worker.tokens_passed()
+
+		print
+		print "Received"
+		for worker in self.workers.values():
+			print "Worker %i:" % worker.get_worker_id(), worker.tokens_received()
+
+		print
+		print "Dead Received"
+		for worker in self.workers.values():
+			print "Worker %i:" % worker.get_worker_id(), worker.get_dead_received()
 
 		for worker in self.workers.values():
 			worker.exit()

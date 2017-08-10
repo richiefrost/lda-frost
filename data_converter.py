@@ -33,6 +33,26 @@ def convert_file_to_docs(doc_file):
 		docs = [line.strip() for line in f]
 	return docs
 
+def sample_test_ready(doc_word, K):
+	D, V = doc_word.shape
+	dt = np.zeros((D, K), dtype=np.intc)
+	wt = np.zeros((V, K), dtype=np.intc)
+	zt = np.zeros(K, dtype=np.intc)
+
+	WS, DS = utils.matrix_to_lists(doc_word)
+	ZS = np.empty_like(WS, dtype=np.intc)
+	N = np.sum(doc_word)
+	np.testing.assert_equal(N, len(WS))
+	# Randomly assign new topics
+	for i in range(N):
+		w, d = WS[i], DS[i]
+		z_new = np.random.randint(K)
+		ZS[i] = z_new
+		dt[d, z_new] += 1
+		wt[w, z_new] += 1
+		zt[z_new] += 1
+	return dt, wt, zt, WS, DS, ZS
+
 # wt, dt, zt, WS, DS, ZS
 def sample_ready(doc_word, K):
 	D, V = doc_word.shape

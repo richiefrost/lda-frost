@@ -3,41 +3,146 @@
 #cython: wraparound=False
 #cython: cdivision=True
 
+from __future__ import division
 import numpy as np
 cimport numpy as np
 from cython.operator cimport preincrement as inc, predecrement as dec
 from libc.stdlib cimport malloc, free
 
-def gibbs_sample(int[:] WS, int[:] DS, int[:] ZS, int[:, :] wt, int[:, :] dt, int[:] zt, double alpha, double beta):
+def gibbs_sample(int[:] WS, int[:] DS, int[:] ZS, int[:, :] wt, int[:, :] dt, int[:] zt, double[:] randoms, double alpha, double beta):
+	cdef int w, d, z, z_, i, j
 	cdef int N = WS.shape[0]
 	cdef int V = wt.shape[0]
 	cdef int K = wt.shape[1]
-	cdef int prev_doc = -1
-	randoms = np.array([np.random.random_sample() for i in range(K)])
-	# Initialize the tree for topics only, expecting to add document topic ratios each time we see a new topic
-	cumulative = np.zeros(K)
+	cdef double uniform, cumsum
+
+	cdef double* cumulative = <double*> malloc(K * sizeof(double))
 	for i in range(N):
 		w = WS[i]
 		d = DS[i]
 		z = ZS[i]
 
-		wt[w, z] -= 1
-		dt[d, z] -= 1
-		zt[z] -= 1
+		dec(wt[w, z])
+		dec(dt[d, z])
+		dec(zt[z])
 
 		cumsum = 0
-		cumulative *= 0
 		for t in range(K):
 			cumsum += ((wt[w, t] + beta) * (dt[d, t] + alpha) / (zt[t] + V * beta))
 			cumulative[t] = cumsum
 
 		uniform = randoms[i % K] * (cumsum)
-		z = np.searchsorted(cumulative, uniform)
+		z_ = searchsorted(cumulative, K, uniform)
 
-		ZS[i] = z
-		wt[w, z] += 1
-		dt[d, z] += 1
-		zt[z] += 1
+		ZS[i] = z_
+		inc(wt[w, z_])
+		inc(dt[d, z_])
+		inc(zt[z_])
+
+	free(cumulative)
+
+def mh_sample(int[:] WS, int[:] DS, int[:] ZS, int[:, :] wt, int[:, :] dt, int[:] zt, int[:] randoms, double[:] uniforms, double alpha, double beta, int mh_steps):
+	cdef int w, d, z, z_, i, j
+	cdef int N = WS.shape[0]
+	cdef int V = wt.shape[0]
+	cdef int K = wt.shape[1]
+	cdef double u, pi
+
+	for i in range(N):
+		w = WS[i]
+		d = DS[i]
+		z = ZS[i]
+		#randoms = np.random.randint(K, size=K, dtype=np.intc)
+		#uniforms = np.array([np.random.random_sample() for i in range(K)])
+		for j in range(mh_steps):
+			z_ = randoms[i % K]
+			pi = min(1, (wt[w, z_] + beta) / (wt[w, z] + beta) * (zt[z] + beta * V) / (zt[z_] + beta * V))
+			#print(pi)
+			u = uniforms[(i + j) % K]
+			#print(u)
+			if u < pi:
+				wt[w, z] -= 1
+				dt[d, z] -= 1
+				zt[z] -= 1
+
+				ZS[i] = z_
+				wt[w, z_] += 1
+				dt[d, z_] += 1
+				zt[z_] += 1
+
+def sample_test(int[:] WS, int[:] DS, int[:] ZS, int[:, :] wt, int[:, :] dt, int[:] zt, double[:] randoms, double alpha, double beta):
+	cdef int i, t, w, d, z, z_new
+	cdef double rT, qT, cumsum, uniform
+	cdef int N = WS.shape[0]
+	cdef int V = wt.shape[0]
+	cdef int K = wt.shape[1]
+	cdef int tree_length = K << 1
+	cdef int probs_length = K
+	cdef int prev_doc = -1
+	cdef double alpha_sum = alpha * V
+	cdef double beta_sum = beta * V
+	
+	cdef double* probs = <double*> malloc(K * sizeof(double))
+	if probs is NULL:
+		raise MemoryError("Could not allocate probs memory during sampling.")
+
+	for t in range(K):
+		probs[t] = (beta * alpha) / (zt[t] + beta_sum)
+
+	cdef double* tree = <double*> malloc((K << 1) * sizeof(double))
+	if tree is NULL:
+		raise MemoryError("Could not allocate tree memory during sampling.")
+
+	create_tree(probs, tree, K)
+	cdef double* rcum = <double*> malloc(K * sizeof(double))
+	if rcum is NULL:
+		raise MemoryError("Could not allocate rcum memory during sampling.")
+	
+	for i in range(N):
+		w = WS[i]
+		d = DS[i]
+		z = ZS[i]
+
+		dec(wt[w, z])
+		dec(dt[d, z])
+		dec(zt[z])
+
+		update_tree(tree, z, tree_length, probs_length, ( beta * (dt[d, z] + alpha) / (zt[z] + beta_sum)) - leaf_val(tree, z, tree_length, probs_length))
+
+		# If we have any document values for the previous document, clear em out
+		if d != prev_doc and prev_doc != -1:
+			for t in range(K):
+				update_tree(tree, t, tree_length, probs_length, (-1 * beta * dt[prev_doc, t]) / (zt[t] + beta_sum))
+
+		# Update the fplus tree with this current document's values
+		if d != prev_doc:
+			for t in range(K):
+				update_tree(tree, t, tree_length, probs_length, ( beta * dt[d, t]) / (zt[t] + beta_sum))	
+				prev_doc = d
+
+		cumsum = 0
+		for t in range(K):
+			cumsum += (wt[w, t] * (dt[d, t] + alpha) / (zt[t] + beta_sum))
+			rcum[t] = cumsum
+
+		rT = rcum[K-1]
+		qT = get_terms_sum(tree)
+		uniform = randoms[i % K] * (rT + qT)
+		if uniform <= rT:
+			z_new = searchsorted(rcum, K, uniform)
+		else:
+			z_new = tree_sample(tree, uniform - rT, K)
+
+		ZS[i] = z_new
+		inc(wt[w, z_new])
+		inc(dt[d, z_new])
+		inc(zt[z_new])
+
+		update_tree(tree, z_new, tree_length, probs_length, (beta * (dt[d, z_new] + alpha) / (zt[z_new] + beta_sum)) - leaf_val(tree, z_new, tree_length, probs_length))
+
+	free(rcum)
+	free(probs)
+	free(tree)
 
 def sample(int[:] WS, int[:] DS, int[:] ZS, int[:] wt, int[:, :] dt, int[:] zt, double[:] randoms, double alpha, double beta, int word):
 	cdef int i, t, w, d, z, z_new
