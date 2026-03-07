@@ -3,8 +3,6 @@ import Pyro4.util
 import data_converter as dc
 import fplus as fp
 import numpy as np
-from Queue import Queue
-from Queue import Empty
 import threading
 import sys
 import utils
@@ -32,7 +30,6 @@ class Worker(object):
 		self.alpha = alpha
 		self.beta = beta
 		self.num_iter = num_iter
-		self.job_queue = Queue()
 
 	@Pyro4.expose
 	def include_workers(self, workers):
@@ -83,8 +80,7 @@ class Worker(object):
 	def receive_token(self, incoming_token):
 		self.received += 1
 		if incoming_token[0] == 0 or incoming_token[0] - 1 in self.uniques:
-			self.job_queue.put(incoming_token)
-			token = self.job_queue.get()
+			token = incoming_token
 			if token[0] > 0 and self.iterations_left[token[0] - 1] <= 0:
 				self.dispatcher.remove_worker_mapping(token[0] - 1, self.worker_id)
 				self.dead_received += 1
@@ -131,9 +127,8 @@ class Worker(object):
 				else:
 					which_worker = mapping[np.random.randint(len(mapping))]
 					self.workers[which_worker].receive_token(token)
-			except:
-				print "Mapping: ", mapping
-				print "Length: %i" % len(mapping)
+			except Exception as e:
+				print "Mapping error:", mapping, str(e)
 
 	def sample(self, token):
 		word = token[0] - 1

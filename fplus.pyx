@@ -117,8 +117,8 @@ def sample_test(int[:] WS, int[:] DS, int[:] ZS, int[:, :] wt, int[:, :] dt, int
 		# Update the fplus tree with this current document's values
 		if d != prev_doc:
 			for t in range(K):
-				update_tree(tree, t, tree_length, probs_length, ( beta * dt[d, t]) / (zt[t] + beta_sum))	
-				prev_doc = d
+				update_tree(tree, t, tree_length, probs_length, ( beta * dt[d, t]) / (zt[t] + beta_sum))
+			prev_doc = d
 
 		cumsum = 0
 		for t in range(K):
@@ -195,8 +195,8 @@ def sample(int[:] WS, int[:] DS, int[:] ZS, int[:] wt, int[:, :] dt, int[:] zt, 
 		# Update the fplus tree with this current document's values
 		if d != prev_doc:
 			for t in range(K):
-				update_tree(tree, t, tree_length, probs_length, (beta * dt[d, t]) / (zt[t] + beta_sum))	
-				prev_doc = d
+				update_tree(tree, t, tree_length, probs_length, (beta * dt[d, t]) / (zt[t] + beta_sum))
+			prev_doc = d
 
 		cumsum = 0
 		for t in range(K):
@@ -233,7 +233,7 @@ cdef int searchsorted(double* arr, int length, double value):
 	imin = 0
 	imax = length
 	while imin < imax:
-		imid = imin + ((imax - imin) >> 2)
+		imid = imin + ((imax - imin) >> 1)
 		if value > arr[imid]:
 			imin = imid + 1
 		else:
@@ -268,7 +268,6 @@ cdef int tree_sample(double* tree, double u, int probs_length):
 			u -= tree[i << 1]
 			i = (i << 1) + 1
 		else:
-			u -= tree[(i << 1) + 1]
 			i = i << 1
 	return i - probs_length
 

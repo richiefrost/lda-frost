@@ -15,19 +15,19 @@ def run_loop(num_iter, doc_file, K=10, alpha=0.001, beta=0.01):
 		print "F+LDA:"
 		for K in topic_counts:
 			t = time()
-			sample_fplus(doc_word, K, alpha=alpha, beta=beta)
+			sample_fplus(doc_word, K, num_iter, alpha=alpha, beta=beta)
 			print time() - t
 
-		
+
 		print "CGS:"
 		for K in topic_counts:
 			t = time()
-			sample_fast_cgs(doc_word, K, alpha=alpha, beta=beta)
+			sample_fast_cgs(doc_word, K, num_iter, alpha=alpha, beta=beta)
 			print time() - t
-		
+
 
 		#print "MH:"
-		#sample_mh(doc_word, K, alpha=alpha, beta=beta)
+		#sample_mh(doc_word, K, num_iter, alpha=alpha, beta=beta)
 
 		'''
 		dt, wt, zt, WS, DS, ZS = dc.sample_test_ready(doc_word, K)
@@ -40,7 +40,7 @@ def run_loop(num_iter, doc_file, K=10, alpha=0.001, beta=0.01):
 
 		'''
 
-def sample_mh(doc_word, K, alpha=0.001, beta=0.01):
+def sample_mh(doc_word, K, num_iter, alpha=0.001, beta=0.01):
 	dt, wt, zt, WS, DS, ZS = dc.sample_test_ready(doc_word, K)
 	uniforms = np.array([np.random.random_sample() for i in range(K)], dtype=np.float64)
 	randoms = np.random.randint(K, size=K, dtype=np.intc)
@@ -53,7 +53,7 @@ def sample_mh(doc_word, K, alpha=0.001, beta=0.01):
 		#ll = rg._loglikelihood(wt, dt, zt, nd, alpha, beta)
 		#print ll
 
-def sample_fplus(doc_word, K, alpha=0.001, beta=0.01):
+def sample_fplus(doc_word, K, num_iter, alpha=0.001, beta=0.01):
 	dt, wt, zt, WS, DS, ZS = dc.sample_test_ready(doc_word, K)
 	randoms = np.array([np.random.random_sample() for i in range(K)])
 	doc_samples, word_samples = np.zeros(num_iter, dtype=np.intc), np.zeros(num_iter, dtype=np.intc)
@@ -66,7 +66,7 @@ def sample_fplus(doc_word, K, alpha=0.001, beta=0.01):
 	#print "Average doc samples: %f" % np.average(doc_samples)
 	#print "Average word samples: %f" % np.average(word_samples)
 
-def sample_fast_cgs(doc_word, K, alpha=0.001, beta=0.01):
+def sample_fast_cgs(doc_word, K, num_iter, alpha=0.001, beta=0.01):
 	dt, wt, zt, WS, DS, ZS = dc.sample_test_ready(doc_word, K)
 	rands = np.array([np.random.random_sample() for i in range(K)])
 	for i in range(num_iter):

@@ -18,11 +18,11 @@ already been cleaned, lowercased and lemmatized, etc.
 '''
 def convert_to_np(docs, vocab):
 	#print "Transforming documents"
-	D = sum([1 for doc in docs])
+	D = len(docs)
 	V = len(vocab)
 	doc_word = np.zeros((D, V), dtype=np.intc)
 	for d, line in enumerate(docs):
-		for word in doc.split():
+		for word in line.split():
 			if word in vocab:
 				w = vocab[word]
 				doc_word[d, w] += 1

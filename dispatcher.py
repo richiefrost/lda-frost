@@ -4,6 +4,7 @@ try:
     from Queue import Queue
 except ImportError:
     from queue import Queue
+from collections import defaultdict
 from six import iteritems, itervalues
 import numpy as np
 import argparse
@@ -67,7 +68,7 @@ class Dispatcher:
 	def create_corpus(self):
 		for worker in self.workers.values():
 			worker.create_corpus()
-		self.token_mappings = {word: set() for word in range(self.V)}
+		self.token_mappings = defaultdict(set)
 		for worker in self.workers.values():
 			for word in worker.get_uniques():
 				self.token_mappings[word].add(worker.get_worker_id())
